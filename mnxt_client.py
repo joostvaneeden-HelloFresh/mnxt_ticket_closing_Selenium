@@ -7,8 +7,14 @@ import shutil
 import tempfile
 
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from config import BASE_URL
+
+WAIT_SECONDS = 20
 
 
 class MnxtClient:
@@ -27,9 +33,26 @@ class MnxtClient:
         self._driver = webdriver.Chrome(options=options)
 
     def login(self, username: str, password: str) -> None:
+        wait = WebDriverWait(self._driver, WAIT_SECONDS)
         self._driver.get(BASE_URL)
-        # TODO: fill in the login fields once we have the selectors (see inspect_login.py)
-        raise NotImplementedError("Login selectors are not filled in yet")
+
+        username_field = wait.until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, "input[autocomplete='email']"))
+        )
+        username_field.clear()
+        username_field.send_keys(username)
+
+        password_field = self._driver.find_element(By.CSS_SELECTOR, "input[type='password']")
+        password_field.clear()
+        password_field.send_keys(password)
+
+        self._driver.find_element(By.XPATH, "//button[normalize-space()='Sign in']").click()
+
+        # The login form disappears once the login has succeeded
+        try:
+            wait.until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "input[type='password']")))
+        except TimeoutException:
+            raise RuntimeError("Login did not complete. Check the username and password.") from None
 
     def close(self) -> None:
         try:
