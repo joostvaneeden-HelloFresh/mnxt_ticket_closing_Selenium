@@ -6,7 +6,7 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 
-from mnxt_client import MnxtClient
+from mnxt_client import CLOSE_OLDER_THAN_DAYS, MnxtClient
 
 ERROR_SCREENSHOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "error_screenshot.png")
 
@@ -109,7 +109,7 @@ class App(tk.Tk):
             client.enable_include_future_mutations()
             self._queue.put(("step", "Sorting by 'Duration' (oldest first)..."))
             client.sort_by_duration_oldest_first()
-            self._queue.put(("step", "Closing tickets older than 5 days, oldest first..."))
+            self._queue.put(("step", f"Closing tickets older than {CLOSE_OLDER_THAN_DAYS} days, oldest first..."))
             closed = client.close_old_tickets(log=lambda msg: self._queue.put(("step", msg)))
             self._queue.put(("step", f"Run finished: {closed} ticket(s) closed."))
         except Exception as exc:

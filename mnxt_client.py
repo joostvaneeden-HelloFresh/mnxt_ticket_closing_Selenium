@@ -23,6 +23,10 @@ WAIT_SECONDS = 30
 # Buttons that change the password are never clicked.
 DISMISS_WORDS = ("later", "remind", "skip", "not now", "close", "dismiss")
 
+# Tickets strictly older than this many days are closed.
+# TEST VALUE: 145. Set back to 5 when the test is done.
+CLOSE_OLDER_THAN_DAYS = 145
+
 # Durations in the ticket list look like "146d 3h 52m", "42m" or "6m"
 DURATION_PART = re.compile(r"(\d+)\s*([dhm])\b")
 UNIT_MINUTES = {"d": 1440, "h": 60, "m": 1}
@@ -221,7 +225,7 @@ class MnxtClient:
                 f"The page shows {shown_id}, but the list had {expected_id}. Nothing was closed."
             )
         age = datetime.now() - created
-        if age <= timedelta(days=5):
+        if age <= timedelta(days=CLOSE_OLDER_THAN_DAYS):
             return False
 
         self._click_when_ready(
@@ -247,7 +251,7 @@ class MnxtClient:
         while True:
             log(f"Checking {ticket_id}...")
             if not self.verify_and_close_ticket(ticket_id):
-                log(f"{ticket_id} is not older than 5 days. No more tickets to close.")
+                log(f"{ticket_id} is not older than {CLOSE_OLDER_THAN_DAYS} days. No more tickets to close.")
                 return closed
             closed += 1
             log(f"Closed {ticket_id}.")
