@@ -10,7 +10,11 @@ import time
 from datetime import datetime, timedelta
 
 from selenium import webdriver
-from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
+from selenium.common.exceptions import (
+    ElementClickInterceptedException,
+    StaleElementReferenceException,
+    TimeoutException,
+)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -66,7 +70,17 @@ class MnxtClient:
             raise RuntimeError(
                 f"Could not find {description} within {WAIT_SECONDS} seconds"
             ) from None
-        element.click()
+        # Another element can briefly cover the button; scroll it into view and retry
+        for _attempt in range(3):
+            try:
+                element.click()
+                return
+            except ElementClickInterceptedException:
+                self._driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+                time.sleep(1)
+        raise RuntimeError(
+            f"{description} is covered by another element and could not be clicked. Nothing more was done."
+        )
 
     def login(self, username: str, password: str) -> None:
         wait = WebDriverWait(self._driver, WAIT_SECONDS)
