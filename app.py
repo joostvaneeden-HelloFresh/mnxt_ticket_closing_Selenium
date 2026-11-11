@@ -9,6 +9,7 @@ from tkinter import ttk
 from mnxt_client import CLOSE_OLDER_THAN_DAYS, MnxtClient
 
 ERROR_SCREENSHOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "error_screenshot.png")
+LOGIN_EMAIL = "rgkogigcvgbnrbnnyl@kjkpc.net"
 
 
 class App(tk.Tk):
@@ -23,6 +24,8 @@ class App(tk.Tk):
         self._queue = queue.Queue()
 
         self._build_widgets()
+        self._user_entry.insert(0, LOGIN_EMAIL)
+        self._log_line(f"Login email: {LOGIN_EMAIL}")
         self._update_buttons()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(100, self._poll_queue)
