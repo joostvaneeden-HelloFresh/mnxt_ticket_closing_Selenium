@@ -112,7 +112,9 @@ class App(tk.Tk):
                 except Exception:
                     pass
                 client.close()
-            self._queue.put(("error", f"Failed ({type(exc).__name__}: {exc})"))
+            # Only the first line of the message: Selenium adds a long stacktrace after it
+            details = (str(exc).strip().splitlines() or [""])[0]
+            self._queue.put(("error", f"Failed: {details}"))
         else:
             self._queue.put(("ready", client))
         finally:

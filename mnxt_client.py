@@ -48,9 +48,14 @@ class MnxtClient:
         wait = WebDriverWait(self._driver, WAIT_SECONDS)
         self._driver.get(BASE_URL)
 
-        username_field = wait.until(
-            EC.visibility_of_element_located((By.CSS_SELECTOR, "input[autocomplete='email']"))
-        )
+        try:
+            username_field = wait.until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, "input[autocomplete='email']"))
+            )
+        except TimeoutException:
+            raise RuntimeError(
+                f"The login page did not show the username field within {WAIT_SECONDS} seconds"
+            ) from None
         username_field.clear()
         username_field.send_keys(username)
 
