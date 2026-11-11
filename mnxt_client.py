@@ -31,8 +31,7 @@ WAIT_SECONDS = 30
 DISMISS_WORDS = ("later", "remind", "skip", "not now", "close", "dismiss")
 
 # Tickets strictly older than this many days are closed.
-# TEST VALUE: 145. Set back to 5 when the test is done.
-CLOSE_OLDER_THAN_DAYS = 145
+CLOSE_OLDER_THAN_DAYS = 5
 
 # Durations in the ticket list look like "146d 3h 52m", "42m" or "6m"
 DURATION_PART = re.compile(r"(\d+)\s*([dhm])\b")
