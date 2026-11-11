@@ -17,6 +17,7 @@ from selenium.common.exceptions import (
     StaleElementReferenceException,
     TimeoutException,
 )
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -208,14 +209,34 @@ class MnxtClient:
         )
 
     def _check_role(self) -> None:
-        """Stop if the top bar does not show the expected role 'CTS CC+'.
+        """Check that the Active Owner is 'CC - CTS CC+'.
 
-        Raises an error before anything is closed, so a wrong role is never used.
+        Opens the Active Owner panel from the round icon in the top bar, reads the
+        owner, and closes the panel by clicking next to it. Raises an error before
+        anything is closed if the owner is different.
         """
-        elements = self._driver.find_elements(By.XPATH, "//*[normalize-space(.)='CTS CC+']")
-        in_top_bar = [e for e in elements if e.is_displayed() and e.location["y"] < 100]
-        if not in_top_bar:
-            raise RuntimeError("The top bar does not show 'CTS CC+'. Stopped; nothing was closed.")
+        owner_button = WebDriverWait(self._driver, WAIT_SECONDS).until(
+            EC.element_to_be_clickable(
+                (By.XPATH, "//i[contains(@class,'mdi-account-cog')]/parent::div")
+            )
+        )
+        owner_button.click()
+        try:
+            owner_shown = self._owner_is_shown()
+        finally:
+            # Close the panel by clicking in the top bar, to the left of the round icon
+            ActionChains(self._driver).move_to_element(owner_button).move_by_offset(-200, 0).click().perform()
+        if not owner_shown:
+            raise RuntimeError("The Active Owner is not 'CC - CTS CC+'. Stopped; nothing was closed.")
+
+    def _owner_is_shown(self) -> bool:
+        try:
+            WebDriverWait(self._driver, 10).until(
+                EC.visibility_of_element_located((By.XPATH, "//span[normalize-space(.)='CC - CTS CC+']"))
+            )
+            return True
+        except TimeoutException:
+            return False
 
     def _read_ticket_page(self):
         """Return (ticket_id, created) from the open ticket page, or None if not loaded yet."""
