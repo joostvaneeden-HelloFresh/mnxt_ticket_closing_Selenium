@@ -275,7 +275,6 @@ class MnxtClient:
         if age <= timedelta(days=CLOSE_OLDER_THAN_DAYS):
             return False
 
-        self._check_role()
         self._click_when_ready(
             (By.XPATH, "//*[self::button or @role='menuitem'][contains(normalize-space(.), 'More options')]"),
             "the 'More options' button",
