@@ -63,6 +63,19 @@ class MnxtClient:
         )
         menu_item.click()
 
+    def open_other_department_tab(self) -> None:
+        wait = WebDriverWait(self._driver, WAIT_SECONDS)
+        tab = wait.until(
+            EC.element_to_be_clickable(
+                (
+                    By.XPATH,
+                    "//*[@role='tab' or self::a or self::button]"
+                    "[contains(normalize-space(.), 'Other Department')]",
+                )
+            )
+        )
+        tab.click()
+
     def save_screenshot(self, path: str) -> None:
         self._driver.save_screenshot(path)
 

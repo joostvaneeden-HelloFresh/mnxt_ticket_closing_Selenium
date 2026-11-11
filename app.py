@@ -103,6 +103,8 @@ class App(tk.Tk):
             client.login(username, password)
             self._queue.put(("step", "Logged in. Opening Customer Ticketing System..."))
             client.open_customer_ticketing()
+            self._queue.put(("step", "Opening tab 'Other Department'..."))
+            client.open_other_department_tab()
         except Exception as exc:
             if client is not None:
                 try:
@@ -126,7 +128,7 @@ class App(tk.Tk):
                     self._client = payload
                     self._busy = False
                     self._update_buttons()
-                    self._log_line("Customer Ticketing System is open. Session is active.")
+                    self._log_line("'Other Department' tab is open. Session is active.")
                 elif kind == "error":
                     self._busy = False
                     self._update_buttons()
