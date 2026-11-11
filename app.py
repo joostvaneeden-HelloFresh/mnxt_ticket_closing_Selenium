@@ -114,6 +114,8 @@ class App(tk.Tk):
             self._queue.put(("step", f"Opened ticket {ticket_id}. Checking it..."))
             client.verify_and_close_ticket(ticket_id)
             self._queue.put(("step", f"Closed ticket {ticket_id}."))
+            self._queue.put(("step", "Going back to the overview..."))
+            client.open_other_department_tab()
         except Exception as exc:
             if client is not None:
                 try:
