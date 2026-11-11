@@ -116,6 +116,9 @@ class App(tk.Tk):
             self._queue.put(("step", f"Closed ticket {ticket_id}."))
             self._queue.put(("step", "Going back to the overview..."))
             client.open_other_department_tab()
+            self._queue.put(("step", "Waiting for a new top ticket..."))
+            next_id = client.open_next_ticket(previous_id=ticket_id)
+            self._queue.put(("step", f"Opened next ticket {next_id} (different from {ticket_id})."))
         except Exception as exc:
             if client is not None:
                 try:

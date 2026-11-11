@@ -165,6 +165,27 @@ class MnxtClient:
         row.click()
         return ticket_id
 
+    def open_next_ticket(self, previous_id: str) -> str:
+        """Open the top ticket once it is a different one than previous_id.
+
+        A ticket that was just closed can stay in the list for a moment, so keep
+        waiting until the top row shows a new ID. Times out with an error.
+        """
+        self._dismiss_popups()
+        end = time.monotonic() + WAIT_SECONDS
+        while time.monotonic() < end:
+            self._wait_for_settled_list()
+            row = self._driver.find_element(By.XPATH, f"{TICKET_ROWS}[1]")
+            match = re.search(r"HF-\d+", row.text)
+            if match and match.group(0) != previous_id:
+                row.click()
+                return match.group(0)
+            time.sleep(1)
+
+        raise RuntimeError(
+            f"The top of the list still shows {previous_id} after {WAIT_SECONDS} seconds. Nothing was opened."
+        )
+
     def _read_ticket_page(self):
         """Return (ticket_id, created) from the open ticket page, or None if not loaded yet."""
         body = self._driver.find_element(By.TAG_NAME, "body").text
