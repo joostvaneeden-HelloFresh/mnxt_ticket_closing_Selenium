@@ -6,9 +6,10 @@ The browser uses a temporary profile that is deleted when the session closes.
 import re
 import shutil
 import tempfile
+import time
 
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -20,6 +21,16 @@ WAIT_SECONDS = 30
 # Only buttons with one of these words are clicked to close a popup.
 # Buttons that change the password are never clicked.
 DISMISS_WORDS = ("later", "remind", "skip", "not now", "close", "dismiss")
+
+# Durations in the ticket list look like "146d 3h 52m", "42m" or "6m"
+DURATION_PART = re.compile(r"(\d+)\s*([dhm])\b")
+UNIT_MINUTES = {"d": 1440, "h": 60, "m": 1}
+TICKET_ROWS = "(//mat-row | //tbody/tr)"
+
+
+def duration_minutes(text: str) -> int:
+    """Convert a duration such as '146d 3h 52m' to minutes."""
+    return sum(int(number) * UNIT_MINUTES[unit] for number, unit in DURATION_PART.findall(text))
 
 
 class MnxtClient:
@@ -98,6 +109,61 @@ class MnxtClient:
             "the 'Other Department' tab",
         )
 
+    def enable_include_future_mutations(self) -> None:
+        # The toggle is found by its label text; clicking the label switches it
+        self._click_when_ready(
+            (By.XPATH, "//label[contains(normalize-space(.), 'Include future mutations')]"),
+            "the 'Include future mutations' toggle",
+        )
+
+    def sort_by_duration_oldest_first(self) -> None:
+        # The first click sorts ascending, the second descending, so the oldest tickets come first
+        header = (
+            By.XPATH,
+            "//th[contains(normalize-space(.), 'Duration')]"
+            " | //*[@role='columnheader'][contains(normalize-space(.), 'Duration')]",
+        )
+        self._click_when_ready(header, "the 'Duration' column header")
+        self._click_when_ready(header, "the 'Duration' column header")
+
+    def _wait_for_settled_list(self) -> None:
+        """Wait until the ticket list is sorted oldest first and has stopped changing.
+
+        Raises an error if that does not happen in time, so we never act on a
+        list that may still be reordering.
+        """
+        end = time.monotonic() + WAIT_SECONDS
+        previous = None
+        while time.monotonic() < end:
+            try:
+                rows = self._driver.find_elements(By.XPATH, TICKET_ROWS)
+                snapshot = [row.text for row in rows]
+            except StaleElementReferenceException:
+                snapshot = None
+
+            if snapshot:
+                durations = [duration_minutes(text) for text in snapshot]
+                sorted_oldest_first = all(a >= b for a, b in zip(durations, durations[1:]))
+                if sorted_oldest_first and snapshot == previous:
+                    return
+            previous = snapshot
+            time.sleep(1)
+
+        raise RuntimeError(
+            f"The ticket list did not settle in oldest-first order within {WAIT_SECONDS} seconds"
+        )
+
+    def open_first_ticket(self) -> str:
+        """Open the top ticket in the list and return its ID (for the log)."""
+        self._dismiss_popups()
+        self._wait_for_settled_list()
+
+        row = self._driver.find_element(By.XPATH, f"{TICKET_ROWS}[1]")
+        match = re.search(r"HF-\d+", row.text)
+        ticket_id = match.group(0) if match else "unknown ID"
+        row.click()
+        return ticket_id
+
     def _dismiss_popups(self) -> None:
         """Close a popup that covers the page, such as a password breach notice.
 
@@ -124,38 +190,6 @@ class MnxtClient:
 
         labels = [b.text.strip() for b in buttons if b.text.strip()]
         raise RuntimeError(f"A popup appeared without a close button. Its buttons: {labels}")
-
-    def enable_include_future_mutations(self) -> None:
-        # The toggle is found by its label text; clicking the label switches it
-        self._click_when_ready(
-            (By.XPATH, "//label[contains(normalize-space(.), 'Include future mutations')]"),
-            "the 'Include future mutations' toggle",
-        )
-
-    def sort_by_duration_oldest_first(self) -> None:
-        # The first click sorts ascending, the second descending, so the oldest tickets come first
-        header = (
-            By.XPATH,
-            "//th[contains(normalize-space(.), 'Duration')]"
-            " | //*[@role='columnheader'][contains(normalize-space(.), 'Duration')]",
-        )
-        self._click_when_ready(header, "the 'Duration' column header")
-        self._click_when_ready(header, "the 'Duration' column header")
-
-    def open_first_ticket(self) -> str:
-        """Open the top ticket in the list and return its ID (for the log)."""
-        self._dismiss_popups()
-        wait = WebDriverWait(self._driver, WAIT_SECONDS)
-        try:
-            # Angular Material tables use mat-row; plain HTML tables use tbody rows
-            row = wait.until(EC.visibility_of_element_located((By.XPATH, "(//mat-row | //tbody/tr)[1]")))
-        except TimeoutException:
-            raise RuntimeError(f"No ticket row found within {WAIT_SECONDS} seconds") from None
-
-        match = re.search(r"HF-\d+", row.text)
-        ticket_id = match.group(0) if match else "unknown ID"
-        row.click()
-        return ticket_id
 
     def save_screenshot(self, path: str) -> None:
         self._driver.save_screenshot(path)
