@@ -212,6 +212,39 @@ class MnxtClient:
             (By.XPATH, "//*[self::button or @role='menuitem'][normalize-space(.)='Close']"),
             "the 'Close' option",
         )
+        self._confirm_status_change()
+
+    def _confirm_status_change(self) -> None:
+        """Click 'Change ticket status' in the confirmation dialog and wait for it to close.
+
+        This is called directly, not through _click_when_ready, because the
+        generic popup check would not know this dialog and would stop the flow.
+        """
+        wait = WebDriverWait(self._driver, WAIT_SECONDS)
+        try:
+            confirm = wait.until(
+                EC.element_to_be_clickable(
+                    (
+                        By.XPATH,
+                        "//*[self::button or @role='button']"
+                        "[contains(normalize-space(.), 'Change ticket status')]",
+                    )
+                )
+            )
+        except TimeoutException:
+            raise RuntimeError(
+                "The 'Change ticket status' confirmation did not appear within 30 seconds"
+            ) from None
+        confirm.click()
+
+        try:
+            wait.until(
+                EC.invisibility_of_element_located(
+                    (By.XPATH, "//*[contains(normalize-space(.), 'Are you sure you want to change the status')]")
+                )
+            )
+        except TimeoutException:
+            raise RuntimeError("The confirmation dialog did not close after confirming") from None
 
     def _dismiss_popups(self) -> None:
         """Close a popup that covers the page, such as a password breach notice.
