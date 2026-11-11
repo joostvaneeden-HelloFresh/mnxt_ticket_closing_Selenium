@@ -2,6 +2,9 @@
 
 Purpose: find the right selectors for logging in. Nothing is filled in or clicked.
 """
+import os
+import time
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -14,10 +17,16 @@ try:
     WebDriverWait(driver, 15).until(
         lambda d: d.execute_script("return document.readyState") == "complete"
     )
+    # Give the single-page app time to render its login form
+    time.sleep(10)
 
     print("Current URL:", driver.current_url)
     print("Title:", driver.title)
     print("Number of iframes:", len(driver.find_elements(By.TAG_NAME, "iframe")))
+
+    screenshot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "login_page.png")
+    driver.save_screenshot(screenshot_path)
+    print("Screenshot saved to:", screenshot_path)
 
     print("\n--- Input fields ---")
     for el in driver.find_elements(By.TAG_NAME, "input"):
