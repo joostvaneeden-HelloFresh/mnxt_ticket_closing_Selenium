@@ -49,6 +49,8 @@ class MnxtClient:
         self._profile_dir = tempfile.mkdtemp(prefix="mnxt_")
         options = Options()
         options.add_argument(f"--user-data-dir={self._profile_dir}")
+        # All steps look for English text, so force English regardless of the machine's Chrome language
+        options.add_argument("--lang=en-US")
         # Stop Chrome from saving or offering to save passwords
         options.add_experimental_option(
             "prefs",
@@ -58,6 +60,7 @@ class MnxtClient:
                 # Stop Chrome from checking passwords against known data breaches
                 # (this is what shows the "Change your password" popup)
                 "profile.password_manager_leak_detection": False,
+                "intl.accept_languages": "en-US,en",
             },
         )
         self._driver = webdriver.Chrome(options=options)
