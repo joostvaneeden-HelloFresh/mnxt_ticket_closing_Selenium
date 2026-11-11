@@ -34,6 +34,9 @@ class MnxtClient:
             {
                 "credentials_enable_service": False,
                 "profile.password_manager_enabled": False,
+                # Stop Chrome from checking passwords against known data breaches
+                # (this is what shows the "Change your password" popup)
+                "profile.password_manager_leak_detection": False,
             },
         )
         self._driver = webdriver.Chrome(options=options)
