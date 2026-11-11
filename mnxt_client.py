@@ -14,7 +14,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from config import BASE_URL
 
-WAIT_SECONDS = 20
+# The app loads its menus and tabs after the login, so wait generously for them
+WAIT_SECONDS = 30
 
 
 class MnxtClient:
@@ -31,6 +32,17 @@ class MnxtClient:
             },
         )
         self._driver = webdriver.Chrome(options=options)
+
+    def _click_when_ready(self, locator, description: str) -> None:
+        """Wait until the element is visible and clickable, then click it."""
+        wait = WebDriverWait(self._driver, WAIT_SECONDS)
+        try:
+            element = wait.until(EC.element_to_be_clickable(locator))
+        except TimeoutException:
+            raise RuntimeError(
+                f"Could not find {description} within {WAIT_SECONDS} seconds"
+            ) from None
+        element.click()
 
     def login(self, username: str, password: str) -> None:
         wait = WebDriverWait(self._driver, WAIT_SECONDS)
@@ -55,26 +67,20 @@ class MnxtClient:
             raise RuntimeError("Login did not complete. Check the username and password.") from None
 
     def open_customer_ticketing(self) -> None:
-        wait = WebDriverWait(self._driver, WAIT_SECONDS)
-        menu_item = wait.until(
-            EC.element_to_be_clickable(
-                (By.XPATH, "//*[normalize-space()='Customer Ticketing System']")
-            )
+        self._click_when_ready(
+            (By.XPATH, "//*[normalize-space()='Customer Ticketing System']"),
+            "the 'Customer Ticketing System' menu item",
         )
-        menu_item.click()
 
     def open_other_department_tab(self) -> None:
-        wait = WebDriverWait(self._driver, WAIT_SECONDS)
-        tab = wait.until(
-            EC.element_to_be_clickable(
-                (
-                    By.XPATH,
-                    "//*[@role='tab' or self::a or self::button]"
-                    "[contains(normalize-space(.), 'Other Department')]",
-                )
-            )
+        self._click_when_ready(
+            (
+                By.XPATH,
+                "//*[@role='tab' or self::a or self::button]"
+                "[contains(normalize-space(.), 'Other Department')]",
+            ),
+            "the 'Other Department' tab",
         )
-        tab.click()
 
     def save_screenshot(self, path: str) -> None:
         self._driver.save_screenshot(path)
