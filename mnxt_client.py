@@ -113,6 +113,7 @@ class MnxtClient:
 
         # Close the popup that can appear right after login, if there is one
         self._dismiss_popups()
+        self._check_role()
 
     def open_customer_ticketing(self) -> None:
         self._click_when_ready(
@@ -206,6 +207,16 @@ class MnxtClient:
             f"The top of the list still shows {previous_id} after {WAIT_SECONDS} seconds. Nothing was opened."
         )
 
+    def _check_role(self) -> None:
+        """Stop if the top bar does not show the expected role 'CTS CC+'.
+
+        Raises an error before anything is closed, so a wrong role is never used.
+        """
+        elements = self._driver.find_elements(By.XPATH, "//*[normalize-space(.)='CTS CC+']")
+        in_top_bar = [e for e in elements if e.is_displayed() and e.location["y"] < 100]
+        if not in_top_bar:
+            raise RuntimeError("The top bar does not show 'CTS CC+'. Stopped; nothing was closed.")
+
     def _read_ticket_page(self):
         """Return (ticket_id, created) from the open ticket page, or None if not loaded yet."""
         body = self._driver.find_element(By.TAG_NAME, "body").text
@@ -244,6 +255,7 @@ class MnxtClient:
         if age <= timedelta(days=CLOSE_OLDER_THAN_DAYS):
             return False
 
+        self._check_role()
         self._click_when_ready(
             (By.XPATH, "//*[self::button or @role='menuitem'][contains(normalize-space(.), 'More options')]"),
             "the 'More options' button",
