@@ -3,6 +3,7 @@
 Credentials are passed in as parameters and are never stored.
 The browser uses a temporary profile that is deleted when the session closes.
 """
+import re
 import shutil
 import tempfile
 
@@ -140,6 +141,21 @@ class MnxtClient:
         )
         self._click_when_ready(header, "the 'Duration' column header")
         self._click_when_ready(header, "the 'Duration' column header")
+
+    def open_first_ticket(self) -> str:
+        """Open the top ticket in the list and return its ID (for the log)."""
+        self._dismiss_popups()
+        wait = WebDriverWait(self._driver, WAIT_SECONDS)
+        try:
+            # Angular Material tables use mat-row; plain HTML tables use tbody rows
+            row = wait.until(EC.visibility_of_element_located((By.XPATH, "(//mat-row | //tbody/tr)[1]")))
+        except TimeoutException:
+            raise RuntimeError(f"No ticket row found within {WAIT_SECONDS} seconds") from None
+
+        match = re.search(r"HF-\d+", row.text)
+        ticket_id = match.group(0) if match else "unknown ID"
+        row.click()
+        return ticket_id
 
     def save_screenshot(self, path: str) -> None:
         self._driver.save_screenshot(path)
