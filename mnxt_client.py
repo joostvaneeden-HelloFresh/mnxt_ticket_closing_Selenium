@@ -54,6 +54,15 @@ class MnxtClient:
         except TimeoutException:
             raise RuntimeError("Login did not complete. Check the username and password.") from None
 
+    def open_customer_ticketing(self) -> None:
+        wait = WebDriverWait(self._driver, WAIT_SECONDS)
+        menu_item = wait.until(
+            EC.element_to_be_clickable(
+                (By.XPATH, "//*[normalize-space()='Customer Ticketing System']")
+            )
+        )
+        menu_item.click()
+
     def close(self) -> None:
         try:
             self._driver.quit()
