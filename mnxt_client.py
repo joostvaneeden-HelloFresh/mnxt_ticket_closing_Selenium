@@ -1,7 +1,7 @@
-"""Browserbesturing voor MobileNXT.
+"""Browser automation for MobileNXT.
 
-Inloggegevens worden alleen als parameter doorgegeven en nergens opgeslagen.
-De browser gebruikt een tijdelijk profiel dat we bij sluiten weer verwijderen.
+Credentials are passed in as parameters and are never stored.
+The browser uses a temporary profile that is deleted when the session closes.
 """
 import shutil
 import tempfile
@@ -16,7 +16,7 @@ class MnxtClient:
         self._profile_dir = tempfile.mkdtemp(prefix="mnxt_")
         options = webdriver.ChromeOptions()
         options.add_argument(f"--user-data-dir={self._profile_dir}")
-        # Chrome mag geen wachtwoorden onthouden of aanbieden om op te slaan
+        # Stop Chrome from saving or offering to save passwords
         options.add_experimental_option(
             "prefs",
             {
@@ -28,8 +28,8 @@ class MnxtClient:
 
     def login(self, username: str, password: str) -> None:
         self._driver.get(BASE_URL)
-        # TODO: inlogvelden invullen zodra we de selectors hebben (via inspect_login.py)
-        raise NotImplementedError("Login-selectors zijn nog niet ingevuld")
+        # TODO: fill in the login fields once we have the selectors (see inspect_login.py)
+        raise NotImplementedError("Login selectors are not filled in yet")
 
     def close(self) -> None:
         try:

@@ -1,4 +1,4 @@
-"""GUI voor MobileNXT. Inloggegevens worden alleen in het geheugen gehouden."""
+"""GUI for MobileNXT. Credentials are kept in memory only."""
 import datetime
 import queue
 import threading
@@ -11,7 +11,7 @@ from mnxt_client import MnxtClient
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("MobileNXT - tickets sluiten")
+        self.title("MobileNXT - ticket closing")
         self.geometry("560x420")
         self.minsize(480, 360)
 
@@ -24,7 +24,7 @@ class App(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(100, self._poll_queue)
 
-    # ----- opbouw -------------------------------------------------------
+    # ----- layout -------------------------------------------------------
 
     def _build_widgets(self):
         frame = ttk.Frame(self, padding=16)
@@ -32,31 +32,31 @@ class App(tk.Tk):
         frame.columnconfigure(0, weight=1)
         frame.rowconfigure(7, weight=1)
 
-        ttk.Label(frame, text="Inloggen MobileNXT", font=("", 12, "bold")).grid(
+        ttk.Label(frame, text="Log in to MobileNXT", font=("", 12, "bold")).grid(
             row=0, column=0, sticky="w"
         )
 
-        ttk.Label(frame, text="Gebruikersnaam").grid(row=1, column=0, sticky="w", pady=(12, 0))
+        ttk.Label(frame, text="Username").grid(row=1, column=0, sticky="w", pady=(12, 0))
         self._user_entry = ttk.Entry(frame)
         self._user_entry.grid(row=2, column=0, sticky="ew")
 
-        ttk.Label(frame, text="Wachtwoord").grid(row=3, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(frame, text="Password").grid(row=3, column=0, sticky="w", pady=(8, 0))
         self._pass_entry = ttk.Entry(frame, show="*")
         self._pass_entry.grid(row=4, column=0, sticky="ew")
         self._pass_entry.bind("<Return>", lambda _event: self._on_login())
 
         buttons = ttk.Frame(frame)
         buttons.grid(row=5, column=0, sticky="w", pady=12)
-        self._login_btn = ttk.Button(buttons, text="Inloggen", command=self._on_login)
+        self._login_btn = ttk.Button(buttons, text="Log in", command=self._on_login)
         self._login_btn.pack(side="left")
-        self._logout_btn = ttk.Button(buttons, text="Uitloggen", command=self._on_logout)
+        self._logout_btn = ttk.Button(buttons, text="Log out", command=self._on_logout)
         self._logout_btn.pack(side="left", padx=8)
 
         ttk.Label(frame, text="Log").grid(row=6, column=0, sticky="w")
         self._log = tk.Text(frame, height=10, wrap="word", state="disabled")
         self._log.grid(row=7, column=0, sticky="nsew")
 
-    # ----- knoppen en log ----------------------------------------------
+    # ----- buttons and log ----------------------------------------------
 
     def _update_buttons(self):
         logged_in = self._client is not None
@@ -64,13 +64,13 @@ class App(tk.Tk):
         self._logout_btn.config(state="normal" if (logged_in and not self._busy) else "disabled")
 
     def _log_line(self, text):
-        tijd = datetime.datetime.now().strftime("%H:%M:%S")
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
         self._log.config(state="normal")
-        self._log.insert("end", f"[{tijd}] {text}\n")
+        self._log.insert("end", f"[{timestamp}] {text}\n")
         self._log.see("end")
         self._log.config(state="disabled")
 
-    # ----- inloggen -----------------------------------------------------
+    # ----- login --------------------------------------------------------
 
     def _on_login(self):
         if self._busy or self._client is not None:
@@ -78,22 +78,22 @@ class App(tk.Tk):
 
         username = self._user_entry.get().strip()
         password = self._pass_entry.get()
-        # Wachtwoord meteen uit het veld halen; het leeft daarna alleen in deze functie
+        # Remove the password from the field right away; it only lives in local variables now
         self._pass_entry.delete(0, "end")
 
         if not username or not password:
-            self._log_line("Vul gebruikersnaam en wachtwoord in.")
+            self._log_line("Please enter a username and password.")
             return
 
         self._busy = True
         self._update_buttons()
-        self._log_line("Bezig met inloggen...")
+        self._log_line("Logging in...")
         threading.Thread(
             target=self._login_worker, args=(username, password), daemon=True
         ).start()
 
     def _login_worker(self, username, password):
-        # Draait op een achtergrondthread: geen Tk-widgets aanraken, alleen de queue gebruiken
+        # Runs on a background thread: do not touch Tk widgets, only use the queue
         client = None
         try:
             client = MnxtClient()
@@ -101,7 +101,7 @@ class App(tk.Tk):
         except Exception as exc:
             if client is not None:
                 client.close()
-            self._queue.put(("error", f"Inloggen mislukt ({type(exc).__name__}: {exc})"))
+            self._queue.put(("error", f"Login failed ({type(exc).__name__}: {exc})"))
         else:
             self._queue.put(("logged_in", client))
         finally:
@@ -115,7 +115,7 @@ class App(tk.Tk):
                     self._client = payload
                     self._busy = False
                     self._update_buttons()
-                    self._log_line("Ingelogd. De sessie is actief.")
+                    self._log_line("Logged in. Session is active.")
                 elif kind == "error":
                     self._busy = False
                     self._update_buttons()
@@ -124,7 +124,7 @@ class App(tk.Tk):
             pass
         self.after(100, self._poll_queue)
 
-    # ----- uitloggen en sluiten ----------------------------------------
+    # ----- logout and close ---------------------------------------------
 
     def _close_client(self):
         if self._client is not None:
@@ -134,7 +134,7 @@ class App(tk.Tk):
     def _on_logout(self):
         self._close_client()
         self._update_buttons()
-        self._log_line("Uitgelogd. Browser en tijdelijke sessiedata zijn verwijderd.")
+        self._log_line("Logged out. Browser and temporary session data have been removed.")
 
     def _on_close(self):
         self._close_client()

@@ -1,5 +1,5 @@
 import os
 
-# URL van MobileNXT. Kan overschreven worden met de environment variable MNXT_URL.
-# Inloggegevens worden niet hier opgeslagen; de GUI vraagt ze bij het inloggen.
+# MobileNXT base URL. Can be overridden with the MNXT_URL environment variable.
+# Login credentials are not stored here; the GUI asks for them at login.
 BASE_URL = os.environ.get("MNXT_URL", "https://hellofresh.mobilenext.eu/")

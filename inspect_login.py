@@ -1,6 +1,6 @@
-"""Hulpscript: opent de loginpagina en laat zien welke velden en knoppen er staan.
+"""Helper script: opens the login page and lists its input fields and buttons.
 
-Doel: de juiste selectors vinden voor het inloggen. Er wordt niets ingevuld of geklikt.
+Purpose: find the right selectors for logging in. Nothing is filled in or clicked.
 """
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -15,21 +15,21 @@ try:
         lambda d: d.execute_script("return document.readyState") == "complete"
     )
 
-    print("Huidige URL:", driver.current_url)
-    print("Titel:", driver.title)
-    print("Aantal iframes:", len(driver.find_elements(By.TAG_NAME, "iframe")))
+    print("Current URL:", driver.current_url)
+    print("Title:", driver.title)
+    print("Number of iframes:", len(driver.find_elements(By.TAG_NAME, "iframe")))
 
-    print("\n--- Input-velden ---")
+    print("\n--- Input fields ---")
     for el in driver.find_elements(By.TAG_NAME, "input"):
         attrs = {a: el.get_attribute(a) for a in ("type", "name", "id", "placeholder", "autocomplete")}
-        print(attrs, "| zichtbaar:", el.is_displayed())
+        print(attrs, "| visible:", el.is_displayed())
 
-    print("\n--- Knoppen en links met tekst ---")
+    print("\n--- Buttons and links with text ---")
     for el in driver.find_elements(By.CSS_SELECTOR, "button, a[href]"):
-        tekst = el.text.strip()
-        if tekst:
-            print(el.tag_name, repr(tekst))
+        text = el.text.strip()
+        if text:
+            print(el.tag_name, repr(text))
 
-    input("\nDruk op Enter om de browser te sluiten...")
+    input("\nPress Enter to close the browser...")
 finally:
     driver.quit()
