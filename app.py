@@ -107,6 +107,8 @@ class App(tk.Tk):
             client.open_other_department_tab()
             self._queue.put(("step", "Switching on 'Include future mutations'..."))
             client.enable_include_future_mutations()
+            self._queue.put(("step", "Sorting by 'Duration' (oldest first)..."))
+            client.sort_by_duration_oldest_first()
         except Exception as exc:
             if client is not None:
                 try:
@@ -132,7 +134,7 @@ class App(tk.Tk):
                     self._client = payload
                     self._busy = False
                     self._update_buttons()
-                    self._log_line("Ready: 'Include future mutations' is on. Session is active.")
+                    self._log_line("Ready: list is sorted oldest first. Session is active.")
                 elif kind == "error":
                     self._busy = False
                     self._update_buttons()

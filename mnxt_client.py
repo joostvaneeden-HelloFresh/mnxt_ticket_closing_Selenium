@@ -131,6 +131,16 @@ class MnxtClient:
             "the 'Include future mutations' toggle",
         )
 
+    def sort_by_duration_oldest_first(self) -> None:
+        # The first click sorts ascending, the second descending, so the oldest tickets come first
+        header = (
+            By.XPATH,
+            "//th[contains(normalize-space(.), 'Duration')]"
+            " | //*[@role='columnheader'][contains(normalize-space(.), 'Duration')]",
+        )
+        self._click_when_ready(header, "the 'Duration' column header")
+        self._click_when_ready(header, "the 'Duration' column header")
+
     def save_screenshot(self, path: str) -> None:
         self._driver.save_screenshot(path)
 
