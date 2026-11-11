@@ -16,6 +16,11 @@ from config import BASE_URL
 
 # The app loads its menus and tabs after the login, so wait generously for them
 WAIT_SECONDS = 30
+# Time to wait for a popup (e.g. a password breach notice) to appear
+POPUP_WAIT_SECONDS = 10
+# Only buttons with one of these words are clicked to close a popup.
+# Buttons that change the password are never clicked.
+DISMISS_WORDS = ("later", "remind", "skip", "not now", "close", "dismiss")
 
 
 class MnxtClient:
@@ -35,6 +40,7 @@ class MnxtClient:
 
     def _click_when_ready(self, locator, description: str) -> None:
         """Wait until the element is visible and clickable, then click it."""
+        self._dismiss_popups()
         wait = WebDriverWait(self._driver, WAIT_SECONDS)
         try:
             element = wait.until(EC.element_to_be_clickable(locator))
@@ -71,6 +77,9 @@ class MnxtClient:
         except TimeoutException:
             raise RuntimeError("Login did not complete. Check the username and password.") from None
 
+        # Close the popup that can appear right after login, if there is one
+        self._dismiss_popups()
+
     def open_customer_ticketing(self) -> None:
         self._click_when_ready(
             (By.XPATH, "//*[normalize-space()='Customer Ticketing System']"),
@@ -86,6 +95,32 @@ class MnxtClient:
             ),
             "the 'Other Department' tab",
         )
+
+    def _dismiss_popups(self) -> None:
+        """Close a popup that covers the page, such as a password breach notice.
+
+        Does nothing if no popup appears. Only buttons whose text clearly closes
+        the popup are clicked. If none is found, the error lists the button texts.
+        """
+        try:
+            dialog = WebDriverWait(self._driver, POPUP_WAIT_SECONDS).until(
+                EC.visibility_of_element_located(
+                    (By.CSS_SELECTOR, "[role='dialog'], mat-dialog-container")
+                )
+            )
+        except TimeoutException:
+            return
+
+        buttons = dialog.find_elements(By.CSS_SELECTOR, "button")
+        for button in buttons:
+            label = button.text.strip().lower()
+            if any(word in label for word in DISMISS_WORDS):
+                button.click()
+                WebDriverWait(self._driver, WAIT_SECONDS).until(EC.invisibility_of_element(dialog))
+                return
+
+        labels = [b.text.strip() for b in buttons if b.text.strip()]
+        raise RuntimeError(f"A popup appeared without a close button. Its buttons: {labels}")
 
     def save_screenshot(self, path: str) -> None:
         self._driver.save_screenshot(path)
