@@ -105,6 +105,8 @@ class App(tk.Tk):
             client.open_customer_ticketing()
             self._queue.put(("step", "Opening tab 'Other Department'..."))
             client.open_other_department_tab()
+            self._queue.put(("step", "Switching on 'Include future mutations'..."))
+            client.enable_include_future_mutations()
         except Exception as exc:
             if client is not None:
                 try:
@@ -130,7 +132,7 @@ class App(tk.Tk):
                     self._client = payload
                     self._busy = False
                     self._update_buttons()
-                    self._log_line("'Other Department' tab is open. Session is active.")
+                    self._log_line("Ready: 'Include future mutations' is on. Session is active.")
                 elif kind == "error":
                     self._busy = False
                     self._update_buttons()

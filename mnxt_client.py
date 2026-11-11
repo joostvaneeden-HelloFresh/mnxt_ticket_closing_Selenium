@@ -124,6 +124,13 @@ class MnxtClient:
         labels = [b.text.strip() for b in buttons if b.text.strip()]
         raise RuntimeError(f"A popup appeared without a close button. Its buttons: {labels}")
 
+    def enable_include_future_mutations(self) -> None:
+        # The toggle is found by its label text; clicking the label switches it
+        self._click_when_ready(
+            (By.XPATH, "//label[contains(normalize-space(.), 'Include future mutations')]"),
+            "the 'Include future mutations' toggle",
+        )
+
     def save_screenshot(self, path: str) -> None:
         self._driver.save_screenshot(path)
 
