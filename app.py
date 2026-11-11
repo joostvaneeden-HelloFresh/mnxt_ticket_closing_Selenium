@@ -111,7 +111,9 @@ class App(tk.Tk):
             client.sort_by_duration_oldest_first()
             self._queue.put(("step", "Opening the top ticket..."))
             ticket_id = client.open_first_ticket()
-            self._queue.put(("step", f"Opened ticket {ticket_id}."))
+            self._queue.put(("step", f"Opened ticket {ticket_id}. Checking it..."))
+            client.verify_and_close_ticket(ticket_id)
+            self._queue.put(("step", f"Closed ticket {ticket_id}."))
         except Exception as exc:
             if client is not None:
                 try:
@@ -137,7 +139,7 @@ class App(tk.Tk):
                     self._client = payload
                     self._busy = False
                     self._update_buttons()
-                    self._log_line("Ready: the oldest ticket is open. Session is active.")
+                    self._log_line("Ready: the oldest ticket was checked and closed. Session is active.")
                 elif kind == "error":
                     self._busy = False
                     self._update_buttons()

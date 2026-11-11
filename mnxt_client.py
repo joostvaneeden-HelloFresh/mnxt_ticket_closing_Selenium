@@ -7,6 +7,7 @@ import re
 import shutil
 import tempfile
 import time
+from datetime import datetime, timedelta
 
 from selenium import webdriver
 from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
@@ -163,6 +164,54 @@ class MnxtClient:
         ticket_id = match.group(0) if match else "unknown ID"
         row.click()
         return ticket_id
+
+    def _read_ticket_page(self):
+        """Return (ticket_id, created) from the open ticket page, or None if not loaded yet."""
+        body = self._driver.find_element(By.TAG_NAME, "body").text
+        id_match = re.search(r"#(HF-\d+)", body)
+        created_match = re.search(r"Created:\s*([A-Za-z]+ \d{1,2}, \d{4} \d{1,2}:\d{2} [AP]M)", body)
+        if not id_match or not created_match:
+            return None
+        created = datetime.strptime(created_match.group(1), "%B %d, %Y %I:%M %p")
+        return id_match.group(1), created
+
+    def verify_and_close_ticket(self, expected_id: str) -> None:
+        """Close the open ticket, but only if it is the expected one and older than 5 days.
+
+        Nothing is clicked unless both checks pass.
+        """
+        end = time.monotonic() + WAIT_SECONDS
+        page = None
+        while time.monotonic() < end:
+            try:
+                page = self._read_ticket_page()
+            except StaleElementReferenceException:
+                page = None
+            if page:
+                break
+            time.sleep(1)
+        if not page:
+            raise RuntimeError("The ticket page did not show its ID and 'Created' date. Nothing was closed.")
+
+        shown_id, created = page
+        if shown_id != expected_id:
+            raise RuntimeError(
+                f"The page shows {shown_id}, but the list had {expected_id}. Nothing was closed."
+            )
+        age = datetime.now() - created
+        if age <= timedelta(days=5):
+            raise RuntimeError(
+                f"{expected_id} was created {age.days} days ago, not older than 5 days. Nothing was closed."
+            )
+
+        self._click_when_ready(
+            (By.XPATH, "//*[self::button or @role='menuitem'][contains(normalize-space(.), 'More options')]"),
+            "the 'More options' button",
+        )
+        self._click_when_ready(
+            (By.XPATH, "//*[self::button or @role='menuitem'][normalize-space(.)='Close']"),
+            "the 'Close' option",
+        )
 
     def _dismiss_popups(self) -> None:
         """Close a popup that covers the page, such as a password breach notice.
