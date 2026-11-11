@@ -10,6 +10,8 @@ import time
 from datetime import datetime, timedelta
 
 from selenium import webdriver
+# Imported explicitly so PyInstaller includes it in the .exe
+from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import (
     ElementClickInterceptedException,
     StaleElementReferenceException,
@@ -45,7 +47,7 @@ def duration_minutes(text: str) -> int:
 class MnxtClient:
     def __init__(self):
         self._profile_dir = tempfile.mkdtemp(prefix="mnxt_")
-        options = webdriver.ChromeOptions()
+        options = Options()
         options.add_argument(f"--user-data-dir={self._profile_dir}")
         # Stop Chrome from saving or offering to save passwords
         options.add_experimental_option(
