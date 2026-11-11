@@ -63,6 +63,9 @@ class MnxtClient:
         )
         menu_item.click()
 
+    def save_screenshot(self, path: str) -> None:
+        self._driver.save_screenshot(path)
+
     def close(self) -> None:
         try:
             self._driver.quit()

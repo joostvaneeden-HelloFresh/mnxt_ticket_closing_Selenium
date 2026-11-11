@@ -1,5 +1,6 @@
 """GUI for MobileNXT. Credentials are kept in memory only."""
 import datetime
+import os
 import queue
 import threading
 import tkinter as tk
@@ -7,13 +8,15 @@ from tkinter import ttk
 
 from mnxt_client import MnxtClient
 
+ERROR_SCREENSHOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "error_screenshot.png")
+
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("MobileNXT - ticket closing")
-        self.geometry("560x460")
-        self.minsize(480, 400)
+        self.geometry("560x420")
+        self.minsize(480, 360)
 
         self._client = None
         self._busy = False
@@ -49,12 +52,8 @@ class App(tk.Tk):
         buttons.grid(row=5, column=0, sticky="w", pady=12)
         self._login_btn = ttk.Button(buttons, text="Log in", command=self._on_login)
         self._login_btn.pack(side="left")
-        self._tickets_btn = ttk.Button(
-            buttons, text="Open ticketing", command=self._on_open_tickets
-        )
-        self._tickets_btn.pack(side="left", padx=8)
         self._logout_btn = ttk.Button(buttons, text="Log out", command=self._on_logout)
-        self._logout_btn.pack(side="left")
+        self._logout_btn.pack(side="left", padx=8)
 
         ttk.Label(frame, text="Log").grid(row=6, column=0, sticky="w")
         self._log = tk.Text(frame, height=10, wrap="word", state="disabled")
@@ -64,10 +63,8 @@ class App(tk.Tk):
 
     def _update_buttons(self):
         logged_in = self._client is not None
-        idle = not self._busy
-        self._login_btn.config(state="normal" if (idle and not logged_in) else "disabled")
-        self._tickets_btn.config(state="normal" if (idle and logged_in) else "disabled")
-        self._logout_btn.config(state="normal" if (idle and logged_in) else "disabled")
+        self._login_btn.config(state="normal" if (not self._busy and not logged_in) else "disabled")
+        self._logout_btn.config(state="normal" if (not self._busy and logged_in) else "disabled")
 
     def _log_line(self, text):
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
@@ -76,7 +73,7 @@ class App(tk.Tk):
         self._log.see("end")
         self._log.config(state="disabled")
 
-    # ----- login --------------------------------------------------------
+    # ----- login and navigation -----------------------------------------
 
     def _on_login(self):
         if self._busy or self._client is not None:
@@ -104,46 +101,37 @@ class App(tk.Tk):
         try:
             client = MnxtClient()
             client.login(username, password)
+            self._queue.put(("step", "Logged in. Opening Customer Ticketing System..."))
+            client.open_customer_ticketing()
         except Exception as exc:
             if client is not None:
+                try:
+                    client.save_screenshot(ERROR_SCREENSHOT)
+                except Exception:
+                    pass
                 client.close()
-            self._queue.put(("error", f"Login failed ({type(exc).__name__}: {exc})"))
+            self._queue.put(("error", f"Failed ({type(exc).__name__}: {exc})"))
         else:
-            self._queue.put(("logged_in", client))
+            self._queue.put(("ready", client))
         finally:
             password = None
-
-    # ----- navigation ---------------------------------------------------
-
-    def _on_open_tickets(self):
-        if self._busy or self._client is None:
-            return
-        self._busy = True
-        self._update_buttons()
-        self._log_line("Opening Customer Ticketing System...")
-        threading.Thread(target=self._open_tickets_worker, daemon=True).start()
-
-    def _open_tickets_worker(self):
-        try:
-            self._client.open_customer_ticketing()
-        except Exception as exc:
-            self._queue.put(("error", f"Could not open ticketing ({type(exc).__name__}: {exc})"))
-        else:
-            self._queue.put(("info", "Customer Ticketing System is open."))
 
     def _poll_queue(self):
         try:
             while True:
                 kind, payload = self._queue.get_nowait()
-                if kind == "logged_in":
+                if kind == "step":
+                    self._log_line(payload)
+                elif kind == "ready":
                     self._client = payload
                     self._busy = False
                     self._update_buttons()
-                    self._log_line("Logged in. Session is active.")
-                elif kind in ("error", "info"):
+                    self._log_line("Customer Ticketing System is open. Session is active.")
+                elif kind == "error":
                     self._busy = False
                     self._update_buttons()
                     self._log_line(payload)
+                    self._log_line(f"Screenshot saved to: {ERROR_SCREENSHOT}")
         except queue.Empty:
             pass
         self.after(100, self._poll_queue)
