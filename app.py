@@ -109,16 +109,9 @@ class App(tk.Tk):
             client.enable_include_future_mutations()
             self._queue.put(("step", "Sorting by 'Duration' (oldest first)..."))
             client.sort_by_duration_oldest_first()
-            self._queue.put(("step", "Opening the top ticket..."))
-            ticket_id = client.open_first_ticket()
-            self._queue.put(("step", f"Opened ticket {ticket_id}. Checking it..."))
-            client.verify_and_close_ticket(ticket_id)
-            self._queue.put(("step", f"Closed ticket {ticket_id}."))
-            self._queue.put(("step", "Going back to the overview..."))
-            client.open_other_department_tab()
-            self._queue.put(("step", "Waiting for a new top ticket..."))
-            next_id = client.open_next_ticket(previous_id=ticket_id)
-            self._queue.put(("step", f"Opened next ticket {next_id} (different from {ticket_id})."))
+            self._queue.put(("step", "Closing tickets older than 5 days, oldest first..."))
+            closed = client.close_old_tickets(log=lambda msg: self._queue.put(("step", msg)))
+            self._queue.put(("step", f"Run finished: {closed} ticket(s) closed."))
         except Exception as exc:
             if client is not None:
                 try:

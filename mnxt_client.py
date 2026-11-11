@@ -196,10 +196,11 @@ class MnxtClient:
         created = datetime.strptime(created_match.group(1), "%B %d, %Y %I:%M %p")
         return id_match.group(1), created
 
-    def verify_and_close_ticket(self, expected_id: str) -> None:
+    def verify_and_close_ticket(self, expected_id: str) -> bool:
         """Close the open ticket, but only if it is the expected one and older than 5 days.
 
-        Nothing is clicked unless both checks pass.
+        Returns True if it was closed, False if the ticket is not older than 5 days.
+        Raises an error if the page shows a different ticket. Nothing is clicked unless both checks pass.
         """
         end = time.monotonic() + WAIT_SECONDS
         page = None
@@ -221,9 +222,7 @@ class MnxtClient:
             )
         age = datetime.now() - created
         if age <= timedelta(days=5):
-            raise RuntimeError(
-                f"{expected_id} was created {age.days} days ago, not older than 5 days. Nothing was closed."
-            )
+            return False
 
         self._click_when_ready(
             (By.XPATH, "//*[self::button or @role='menuitem'][contains(normalize-space(.), 'More options')]"),
@@ -234,6 +233,26 @@ class MnxtClient:
             "the 'Close' option",
         )
         self._confirm_status_change()
+        return True
+
+    def close_old_tickets(self, log) -> int:
+        """Close tickets older than 5 days, oldest first, until the top one is not old enough.
+
+        Stops with an error (never a guess) if the page shows a different ticket than the
+        list, or if the top of the list does not change after a close.
+        Returns the number of tickets closed in this run.
+        """
+        closed = 0
+        ticket_id = self.open_first_ticket()
+        while True:
+            log(f"Checking {ticket_id}...")
+            if not self.verify_and_close_ticket(ticket_id):
+                log(f"{ticket_id} is not older than 5 days. No more tickets to close.")
+                return closed
+            closed += 1
+            log(f"Closed {ticket_id}.")
+            self.open_other_department_tab()
+            ticket_id = self.open_next_ticket(previous_id=ticket_id)
 
     def _confirm_status_change(self) -> None:
         """Click 'Change ticket status' in the confirmation dialog and wait for it to close.
