@@ -16,8 +16,6 @@ from config import BASE_URL
 
 # The app loads its menus and tabs after the login, so wait generously for them
 WAIT_SECONDS = 30
-# Time to wait for a popup (e.g. a password breach notice) to appear
-POPUP_WAIT_SECONDS = 10
 # Only buttons with one of these words are clicked to close a popup.
 # Buttons that change the password are never clicked.
 DISMISS_WORDS = ("later", "remind", "skip", "not now", "close", "dismiss")
@@ -105,14 +103,15 @@ class MnxtClient:
         Does nothing if no popup appears. Only buttons whose text clearly closes
         the popup are clicked. If none is found, the error lists the button texts.
         """
-        try:
-            dialog = WebDriverWait(self._driver, POPUP_WAIT_SECONDS).until(
-                EC.visibility_of_element_located(
-                    (By.CSS_SELECTOR, "[role='dialog'], mat-dialog-container")
-                )
-            )
-        except TimeoutException:
+        # Check once, without waiting: most of the time there is no popup
+        dialogs = [
+            d
+            for d in self._driver.find_elements(By.CSS_SELECTOR, "[role='dialog'], mat-dialog-container")
+            if d.is_displayed()
+        ]
+        if not dialogs:
             return
+        dialog = dialogs[0]
 
         buttons = dialog.find_elements(By.CSS_SELECTOR, "button")
         for button in buttons:
