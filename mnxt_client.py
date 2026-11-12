@@ -195,15 +195,18 @@ class MnxtClient:
         A ticket that was just closed can stay in the list for a moment, so keep
         waiting until the top row shows a new ID. Times out with an error.
         """
-        self._dismiss_popups()
         end = time.monotonic() + WAIT_SECONDS
         while time.monotonic() < end:
-            self._wait_for_settled_list()
-            row = self._driver.find_element(By.XPATH, f"{TICKET_ROWS}[1]")
-            match = re.search(r"HF-\d+", row.text)
-            if match and match.group(0) != previous_id:
-                row.click()
-                return match.group(0)
+            try:
+                self._dismiss_popups()
+                self._wait_for_settled_list()
+                row = self._driver.find_element(By.XPATH, f"{TICKET_ROWS}[1]")
+                match = re.search(r"HF-\d+", row.text)
+                if match and match.group(0) != previous_id:
+                    row.click()
+                    return match.group(0)
+            except StaleElementReferenceException:
+                pass  # the page was redrawn while we looked; look again
             time.sleep(1)
 
         raise RuntimeError(
