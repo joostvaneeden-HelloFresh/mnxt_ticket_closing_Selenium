@@ -83,9 +83,8 @@ class MnxtClient:
             except ElementClickInterceptedException:
                 self._driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
                 time.sleep(1)
-        raise RuntimeError(
-            f"{description} is covered by another element and could not be clicked. Nothing more was done."
-        )
+        # Still covered (the comment box can sit on top of the menu). Click this exact element directly.
+        self._driver.execute_script("arguments[0].click();", element)
 
     def login(self, username: str, password: str) -> None:
         wait = WebDriverWait(self._driver, WAIT_SECONDS)
